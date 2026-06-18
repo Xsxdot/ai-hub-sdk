@@ -42,6 +42,8 @@ type IAIHubMedia interface {
 	GenerateSpeech(ctx context.Context, req *dto.SpeechRequest) (*dto.SpeechResult, error)
 	// Transcribe 同步 ASR 识别，返回文本。
 	Transcribe(ctx context.Context, req *dto.TranscribeRequest) (*dto.TranscribeResult, error)
+	// Ocr 同步 OCR 识别，输入 OSS key 或公网图像 URL，返回文本与可选结构化结果。
+	Ocr(ctx context.Context, req *dto.OcrRequest) (*dto.OcrResult, error)
 	// SubmitVideoJob 提交异步视频生成任务，返回业务 jobID。
 	SubmitVideoJob(ctx context.Context, req *dto.VideoJobRequest) (jobID string, err error)
 	// GetJob 查询异步任务状态与结果（业务方轮询）。
