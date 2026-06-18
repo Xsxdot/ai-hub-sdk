@@ -20,6 +20,10 @@ type IAIHub interface {
 	Chat(ctx context.Context, req *dto.ChatRequest) (*dto.ChatResponse, error)
 	// ChatStream 流式对话，返回统一事件流（业务方消费转发）。
 	ChatStream(ctx context.Context, req *dto.ChatRequest) (<-chan dto.StreamEvent, error)
+	// Embedding 同步文本向量化。
+	Embedding(ctx context.Context, req *dto.EmbeddingRequest) (*dto.EmbeddingResponse, error)
+	// Rerank 同步文本重排序。
+	Rerank(ctx context.Context, req *dto.RerankRequest) (*dto.RerankResponse, error)
 }
 
 // IAIHubMedia AI 多模态调用对外契约（图片/视频/语音）。
