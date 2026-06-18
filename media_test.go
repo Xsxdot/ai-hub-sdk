@@ -104,3 +104,17 @@ func TestGenerateSpeechAndTranscribeAndCreateVoice(t *testing.T) {
 		t.Fatalf("res=%+v path=%s", res, p)
 	}
 }
+
+func TestOcr(t *testing.T) {
+	var m, p string
+	srv := newJSONServer(t, `{"status":200,"data":{"model":"ocr","text":"hello","structured":{"kv_result":{"id":"42"}}}}`, &m, &p)
+	defer srv.Close()
+	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
+	res, err := c.Ocr(context.Background(), &dto.OcrRequest{Model: "ocr", ImageURL: "https://x/y.jpg", Task: dto.OcrTaskTextRecognition})
+	if err != nil {
+		t.Fatalf("ocr err: %v", err)
+	}
+	if res.Text != "hello" || res.Structured == nil || p != "/v1/ocr" || m != http.MethodPost {
+		t.Fatalf("res=%+v path=%s method=%s", res, p, m)
+	}
+}

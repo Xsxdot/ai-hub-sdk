@@ -1,4 +1,4 @@
-// media.go 实现 IAIHubMedia 契约：图片/语音/ASR/音色/视频异步任务。
+// media.go 实现 IAIHubMedia 契约：图片/语音/ASR/OCR/音色/视频异步任务。
 //
 // 职责：
 //   - 对齐 server/system/aihub/router.go 暴露的 /v1/* 多模态 HTTP 路由
@@ -54,6 +54,15 @@ func (c *Client) GenerateSpeech(ctx context.Context, req *dto.SpeechRequest) (*d
 func (c *Client) Transcribe(ctx context.Context, req *dto.TranscribeRequest) (*dto.TranscribeResult, error) {
 	var res dto.TranscribeResult
 	if err := c.doJSON(ctx, http.MethodPost, "/v1/audio/transcriptions", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// Ocr 同步 OCR 识别。POST /v1/ocr。
+func (c *Client) Ocr(ctx context.Context, req *dto.OcrRequest) (*dto.OcrResult, error) {
+	var res dto.OcrResult
+	if err := c.doJSON(ctx, http.MethodPost, "/v1/ocr", req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil

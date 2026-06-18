@@ -20,6 +20,10 @@ type IAIHub interface {
 	Chat(ctx context.Context, req *dto.ChatRequest) (*dto.ChatResponse, error)
 	// ChatStream 流式对话，返回统一事件流（业务方消费转发）。
 	ChatStream(ctx context.Context, req *dto.ChatRequest) (<-chan dto.StreamEvent, error)
+	// Embedding 同步文本向量化。
+	Embedding(ctx context.Context, req *dto.EmbeddingRequest) (*dto.EmbeddingResponse, error)
+	// Rerank 同步文本重排序。
+	Rerank(ctx context.Context, req *dto.RerankRequest) (*dto.RerankResponse, error)
 }
 
 // IAIHubMedia AI 多模态调用对外契约（图片/视频/语音）。
@@ -38,6 +42,8 @@ type IAIHubMedia interface {
 	GenerateSpeech(ctx context.Context, req *dto.SpeechRequest) (*dto.SpeechResult, error)
 	// Transcribe 同步 ASR 识别，返回文本。
 	Transcribe(ctx context.Context, req *dto.TranscribeRequest) (*dto.TranscribeResult, error)
+	// Ocr 同步 OCR 识别，输入 OSS key 或公网图像 URL，返回文本与可选结构化结果。
+	Ocr(ctx context.Context, req *dto.OcrRequest) (*dto.OcrResult, error)
 	// SubmitVideoJob 提交异步视频生成任务，返回业务 jobID。
 	SubmitVideoJob(ctx context.Context, req *dto.VideoJobRequest) (jobID string, err error)
 	// GetJob 查询异步任务状态与结果（业务方轮询）。
