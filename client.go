@@ -12,6 +12,8 @@ package aihubsdk
 import (
 	"net/http"
 	"strings"
+
+	"github.com/xsxdot/ai-hub-sdk/aihubapi"
 )
 
 // Client 是 ai-hub 的跨进程 HTTP 客户端。
@@ -20,6 +22,10 @@ type Client struct {
 	apiKey     string
 	httpClient *http.Client
 }
+
+// 编译期断言：Client 必须实现两个对外契约。
+var _ aihubapi.IAIHub = (*Client)(nil)
+var _ aihubapi.IAIHubMedia = (*Client)(nil)
 
 // New 构造 Client。
 //
