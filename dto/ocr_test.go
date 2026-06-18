@@ -1,3 +1,10 @@
+// Package dto 的 OCR 契约测试：验证 OCR 中立 DTO 的 JSON 兼容性。
+//
+// 职责：
+//   - 覆盖 OcrRequest/OcrResult 的 JSON 往返序列化
+//
+// 边界：
+//   - 不测试 server 端厂商协议、OSS 解析或计费逻辑
 package dto
 
 import (
