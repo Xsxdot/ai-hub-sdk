@@ -71,6 +71,19 @@ type ThinkingConfig struct {
 	Level   ThinkingLevel `json:"level,omitempty"`
 }
 
+// ResponseFormatType 统一结构化输出格式。各厂商 Codec 负责映射到自己的请求字段。
+type ResponseFormatType string
+
+const (
+	// ResponseFormatJSONObject 要求模型输出一个 JSON object。
+	ResponseFormatJSONObject ResponseFormatType = "json_object"
+)
+
+// ResponseFormatConfig 控制模型输出格式。
+type ResponseFormatConfig struct {
+	Type ResponseFormatType `json:"type"`
+}
+
 // Tool 工具定义（function calling）。
 type Tool struct {
 	Name        string         `json:"name"`
@@ -80,15 +93,16 @@ type Tool struct {
 
 // ChatRequest 统一对话请求。
 type ChatRequest struct {
-	Model       string            `json:"model"`
-	Messages    []Message         `json:"messages"`
-	System      string            `json:"system,omitempty"`
-	MaxTokens   int               `json:"maxTokens,omitempty"`
-	Temperature float64           `json:"temperature,omitempty"`
-	Thinking    *ThinkingConfig   `json:"thinking,omitempty"`
-	Tools       []Tool            `json:"tools,omitempty"`
-	Stream      bool              `json:"stream"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	Model          string                `json:"model"`
+	Messages       []Message             `json:"messages"`
+	System         string                `json:"system,omitempty"`
+	MaxTokens      int                   `json:"maxTokens,omitempty"`
+	Temperature    float64               `json:"temperature,omitempty"`
+	Thinking       *ThinkingConfig       `json:"thinking,omitempty"`
+	ResponseFormat *ResponseFormatConfig `json:"responseFormat,omitempty"`
+	Tools          []Tool                `json:"tools,omitempty"`
+	Stream         bool                  `json:"stream"`
+	Metadata       map[string]string     `json:"metadata,omitempty"`
 }
 
 // BillingMetric 计量维度。

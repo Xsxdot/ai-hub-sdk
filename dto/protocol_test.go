@@ -51,6 +51,23 @@ func TestThinkingLevel_JSONRoundTripMedium(t *testing.T) {
 	assert.Equal(t, ThinkingMedium, got.Level)
 }
 
+func TestResponseFormat_JSONRoundTripJSONObject(t *testing.T) {
+	req := ChatRequest{
+		Model:          "smart",
+		Messages:       []Message{{Role: RoleUser, Content: []ContentBlock{{Type: BlockText, Text: "return json"}}}},
+		ResponseFormat: &ResponseFormatConfig{Type: ResponseFormatJSONObject},
+	}
+
+	raw, err := json.Marshal(req)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"responseFormat":{"type":"json_object"}`)
+
+	var got ChatRequest
+	require.NoError(t, json.Unmarshal(raw, &got))
+	require.NotNil(t, got.ResponseFormat)
+	assert.Equal(t, ResponseFormatJSONObject, got.ResponseFormat.Type)
+}
+
 func TestUsage_Metrics(t *testing.T) {
 	u := Usage{Metrics: map[BillingMetric]float64{
 		MetricTokenInput:  1200,
