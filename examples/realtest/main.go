@@ -164,7 +164,7 @@ func runImage(ctx context.Context, client *aihubsdk.Client, cfg Config, log *slo
 		if i >= cfg.ImageArtifactMax {
 			break
 		}
-		attrs = append(attrs, "artifactRef", artifact.Ref, "artifactMediaType", artifact.MediaType)
+		attrs = append(attrs, "artifactOssKey", artifact.OSSKey, "artifactMediaType", artifact.MediaType)
 	}
 	log.Info("image generated", attrs...)
 	return nil
@@ -245,8 +245,8 @@ func runASR(ctx context.Context, client *aihubsdk.Client, cfg Config, log *slog.
 	defer cancel()
 
 	res, err := client.Transcribe(ctx, &dto.TranscribeRequest{
-		Model:    cfg.ASRModel,
-		AudioURL: cfg.AudioURL,
+		Model: cfg.ASRModel,
+		Audio: mediaRefPtr(dto.URLMediaRef(cfg.AudioURL, "audio/mpeg")),
 	})
 	if err != nil {
 		return err
@@ -259,6 +259,10 @@ func runASR(ctx context.Context, client *aihubsdk.Client, cfg Config, log *slog.
 		"textPreview", textPreview(res.Text, 120),
 	)
 	return nil
+}
+
+func mediaRefPtr(ref dto.MediaRef) *dto.MediaRef {
+	return &ref
 }
 
 func textPreview(text string, maxRunes int) string {
