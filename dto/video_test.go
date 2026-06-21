@@ -19,12 +19,12 @@ func TestVideoJobRequestJSONRoundTrip(t *testing.T) {
 		Model:       "smart-video",
 		Task:        VideoTaskFirstLastFrame,
 		Prompt:      "cat yawns",
-		FirstFrame:  "https://x/first.png",
-		LastFrame:   "https://x/last.png",
-		RefImages:   []string{"https://x/r1.png"},
-		RefVideos:   []string{"https://x/v1.mp4"},
-		SourceVideo: "https://x/src.mp4",
-		RefAudios:   []string{"https://x/a1.mp3"},
+		FirstFrame:  mediaRefPtr(URLMediaRef("https://x/first.png", "image/png")),
+		LastFrame:   mediaRefPtr(URLMediaRef("https://x/last.png", "image/png")),
+		RefImages:   []MediaRef{URLMediaRef("https://x/r1.png", "image/png")},
+		RefVideos:   []MediaRef{URLMediaRef("https://x/v1.mp4", "video/mp4")},
+		SourceVideo: mediaRefPtr(OSSKeyMediaRef("ai-hub/public-media/video/src.mp4", "video/mp4")),
+		RefAudios:   []MediaRef{URLMediaRef("https://x/a1.mp3", "audio/mpeg")},
 		Options:     map[string]any{"duration": float64(10)},
 		Metadata:    map[string]string{"tier": "pro"},
 	}
@@ -39,11 +39,14 @@ func TestVideoJobRequestJSONRoundTrip(t *testing.T) {
 	if out.Task != VideoTaskFirstLastFrame {
 		t.Fatalf("task = %q, want first_last_frame", out.Task)
 	}
-	if out.FirstFrame != "https://x/first.png" || out.LastFrame != "https://x/last.png" {
+	if out.FirstFrame == nil || out.FirstFrame.URL != "https://x/first.png" || out.LastFrame == nil || out.LastFrame.URL != "https://x/last.png" {
 		t.Fatalf("frame slots not preserved: %+v", out)
 	}
 	if len(out.RefImages) != 1 || len(out.RefVideos) != 1 || len(out.RefAudios) != 1 {
 		t.Fatalf("ref slots not preserved: %+v", out)
+	}
+	if out.SourceVideo == nil || out.SourceVideo.OSSKey != "ai-hub/public-media/video/src.mp4" {
+		t.Fatalf("source video slot not preserved: %+v", out)
 	}
 }
 
@@ -93,5 +96,16 @@ func TestVideoCoreParamValidators(t *testing.T) {
 	}
 	if IsValidResolution("99p") {
 		t.Fatal("expected 99p resolution invalid")
+	}
+}
+
+func TestMediaArtifactJSONUsesOSSKey(t *testing.T) {
+	artifact := MediaArtifact{OSSKey: "ai-hub/public-media/video/out.mp4", MediaType: "video/mp4"}
+	raw, err := json.Marshal(artifact)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if string(raw) != `{"ossKey":"ai-hub/public-media/video/out.mp4","mediaType":"video/mp4"}` {
+		t.Fatalf("json=%s", raw)
 	}
 }

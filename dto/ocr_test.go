@@ -15,7 +15,7 @@ import (
 func TestOcrRequestJSON(t *testing.T) {
 	req := OcrRequest{
 		Model:        "qwen3.5-ocr",
-		ImageURL:     "oss://ocr/in/x.jpg",
+		Image:        mediaRefPtr(OSSKeyMediaRef("ai-hub/public-media/image/ocr/in/x.jpg", "image/jpeg")),
 		Task:         OcrTaskKeyInformation,
 		ResultSchema: map[string]any{"发票号码": "提取发票号码"},
 		Options:      map[string]any{"enable_rotate": true},
@@ -28,7 +28,7 @@ func TestOcrRequestJSON(t *testing.T) {
 	if err := json.Unmarshal(b, &round); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if round.Task != OcrTaskKeyInformation || round.ImageURL != "oss://ocr/in/x.jpg" {
+	if round.Task != OcrTaskKeyInformation || round.Image == nil || round.Image.OSSKey != "ai-hub/public-media/image/ocr/in/x.jpg" {
 		t.Fatalf("round trip mismatch: %+v", round)
 	}
 }

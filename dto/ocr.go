@@ -25,7 +25,7 @@ const (
 // OcrRequest OCR 请求（中立契约）。
 type OcrRequest struct {
 	Model        string         `json:"model"`                  // 逻辑模型名
-	ImageURL     string         `json:"imageUrl"`               // OSS key（oss://...）或公网 URL
+	Image        *MediaRef      `json:"image"`                  // 公网 URL 或 ai-hub 发放的 ossKey
 	Task         OcrTask        `json:"task,omitempty"`         // 内置任务；为空且无 Prompt 时厂商用默认提示词
 	Prompt       string         `json:"prompt,omitempty"`       // 自定义提示词（与 Task 可并存）
 	ResultSchema map[string]any `json:"resultSchema,omitempty"` // 仅 key_information_extraction：自定义抽取字段模板

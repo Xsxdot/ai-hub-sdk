@@ -31,14 +31,13 @@ const (
 )
 
 // ContentBlock 内容块，统一承载多模态输入与思维链/工具输出。
-// 不同 Type 使用不同字段子集（如 text 用 Text；image/video 用 Source/MediaType）。
+// 不同 Type 使用不同字段子集（如 text 用 Text；image/video 用 Media）。
 type ContentBlock struct {
 	Type BlockType `json:"type"`
 	// text / thinking
 	Text string `json:"text,omitempty"`
-	// image/video：source 为 url 或 base64，MediaType 如 image/png、video/mp4
-	Source    string `json:"source,omitempty"`
-	MediaType string `json:"mediaType,omitempty"`
+	// image/video：使用显式 MediaRef 区分公网 URL 与 ai-hub 发放的 ossKey。
+	Media *MediaRef `json:"media,omitempty"`
 	// tool_use
 	ID    string         `json:"id,omitempty"`
 	Name  string         `json:"name,omitempty"`

@@ -22,10 +22,7 @@ type CreateVoiceRequest struct {
 	PreviewText     string      `json:"previewText,omitempty"`
 	Source          VoiceSource `json:"source"`
 	ChannelModelIDs []int64     `json:"channelModelIds,omitempty"` // 空则用默认创建渠道集
-	RefAudioRef     string      `json:"refAudioRef,omitempty"`     // clone: internal media ref
-	RefAudioName    string      `json:"refAudioName,omitempty"`    // clone: display filename
-	RefAudioURL     string      `json:"refAudioUrl,omitempty"`     // clone
-	RefAudioB64     string      `json:"refAudioB64,omitempty"`     // clone
+	RefAudio        *MediaRef   `json:"refAudio,omitempty"`        // clone: 公网 URL 或 ai-hub ossKey
 }
 
 // VoiceBindingResult 单个渠道绑定的创建结果。
@@ -33,7 +30,7 @@ type VoiceBindingResult struct {
 	ChannelModelID   int64  `json:"channelModelId"`
 	BindingID        int64  `json:"bindingId,omitempty"`
 	VendorVoiceID    string `json:"vendorVoiceId,omitempty"`
-	PreviewRef       string `json:"previewRef,omitempty"`
+	PreviewOssKey    string `json:"previewOssKey,omitempty"`
 	PreviewMediaType string `json:"previewMediaType,omitempty"`
 	Reason           string `json:"reason,omitempty"` // 失败原因
 }
@@ -62,7 +59,7 @@ type SpeechResult struct {
 	Voice              string `json:"voice"`
 	VoiceBindingID     int64  `json:"voiceBindingId,omitempty"`
 	ActualChannelModel string `json:"actualChannelModel"`
-	AudioRef           string `json:"audioRef"` // 永久 OSS 引用
+	AudioOssKey        string `json:"audioOssKey"` // 永久 OSS 引用
 	MediaType          string `json:"mediaType"`
 	Usage              Usage  `json:"usage"`
 	Cost               Cost   `json:"cost"`
@@ -71,7 +68,7 @@ type SpeechResult struct {
 // TranscribeRequest ASR 识别请求。
 type TranscribeRequest struct {
 	Model    string            `json:"model"`
-	AudioURL string            `json:"audioUrl"`
+	Audio    *MediaRef         `json:"audio"`
 	Metadata map[string]string `json:"metadata,omitempty"`
 }
 

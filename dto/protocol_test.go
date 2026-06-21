@@ -16,7 +16,7 @@ func TestChatRequest_JSONRoundTrip(t *testing.T) {
 				Role: RoleUser,
 				Content: []ContentBlock{
 					{Type: BlockText, Text: "你好"},
-					{Type: BlockImage, Source: "https://x/y.png", MediaType: "image/png"},
+					{Type: BlockImage, Media: mediaRefPtr(URLMediaRef("https://x/y.png", "image/png"))},
 				},
 			},
 		},
@@ -37,6 +37,8 @@ func TestChatRequest_JSONRoundTrip(t *testing.T) {
 	require.Len(t, got.Messages[0].Content, 2)
 	assert.Equal(t, BlockText, got.Messages[0].Content[0].Type)
 	assert.Equal(t, BlockImage, got.Messages[0].Content[1].Type)
+	require.NotNil(t, got.Messages[0].Content[1].Media)
+	assert.Equal(t, MediaRefTypeURL, got.Messages[0].Content[1].Media.Type)
 	require.NotNil(t, got.Thinking)
 	assert.Equal(t, ThinkingHigh, got.Thinking.Level)
 }

@@ -97,12 +97,12 @@ type VideoJobRequest struct {
 	Prompt string    `json:"prompt"`
 
 	// 语义素材槽。各 task 只填用到的槽，校验器据此核对数量。
-	FirstFrame  string   `json:"firstFrame,omitempty"`  // image2video / first_last_frame
-	LastFrame   string   `json:"lastFrame,omitempty"`   // first_last_frame
-	RefImages   []string `json:"refImages,omitempty"`   // ref_image2video / video_edit 参考图
-	RefVideos   []string `json:"refVideos,omitempty"`   // ref_video2video 参考视频
-	SourceVideo string   `json:"sourceVideo,omitempty"` // video_edit 待编辑视频
-	RefAudios   []string `json:"refAudios,omitempty"`   // 驱动/参考音频
+	FirstFrame  *MediaRef  `json:"firstFrame,omitempty"`  // image2video / first_last_frame
+	LastFrame   *MediaRef  `json:"lastFrame,omitempty"`   // first_last_frame
+	RefImages   []MediaRef `json:"refImages,omitempty"`   // ref_image2video / video_edit 参考图
+	RefVideos   []MediaRef `json:"refVideos,omitempty"`   // ref_video2video 参考视频
+	SourceVideo *MediaRef  `json:"sourceVideo,omitempty"` // video_edit 待编辑视频
+	RefAudios   []MediaRef `json:"refAudios,omitempty"`   // 驱动/参考音频
 
 	// 核心中立调参（强类型枚举，跨厂商契约保证）。
 	AspectRatio AspectRatio `json:"aspectRatio,omitempty"` // 约分 W:H，见 AspectRatio
@@ -145,7 +145,7 @@ const (
 
 // MediaArtifact 永久 OSS 产物引用。
 type MediaArtifact struct {
-	Ref       string `json:"ref"`
+	OSSKey    string `json:"ossKey"`
 	MediaType string `json:"mediaType"`
 }
 

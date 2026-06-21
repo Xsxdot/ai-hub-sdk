@@ -16,13 +16,13 @@ type ImageRequest struct {
 	Resolution  string            `json:"resolution,omitempty"`  // 中立分辨率档位，如 standard / high
 	Size        string            `json:"size,omitempty"`        // Deprecated: 厂商侧尺寸值，仅兼容旧调用
 	N           int               `json:"n,omitempty"`           // 生成张数；<=0 视为 1
-	RefImages   []string          `json:"refImages,omitempty"`   // 参考图（url 或 base64），部分厂商支持
+	RefImages   []MediaRef        `json:"refImages,omitempty"`   // 参考图，支持公网 URL 或 ai-hub ossKey
 	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
 // ImageArtifact 一张生成产物，已转存为永久 OSS 引用。
 type ImageArtifact struct {
-	Ref       string `json:"ref"`       // OSS objectKey/ref
+	OSSKey    string `json:"ossKey"`    // ai-hub 发放的永久 OSS object key
 	MediaType string `json:"mediaType"` // 如 image/png
 }
 
