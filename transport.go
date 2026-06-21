@@ -30,6 +30,12 @@ type resultShell struct {
 	Data    json.RawMessage `json:"data"`
 }
 
+const (
+	traceContextKey     = "traceId"
+	traceHeaderName     = "Trace-Head"
+	traceHeaderXTraceID = "X-Trace-Id"
+)
+
 // newRequest 构造带鉴权头的请求。body 为 nil 时不带 body（用于 GET/DELETE）。
 func (c *Client) newRequest(ctx context.Context, method, path string, body any) (*http.Request, error) {
 	var reader io.Reader
@@ -45,10 +51,28 @@ func (c *Client) newRequest(ctx context.Context, method, path string, body any) 
 		return nil, err
 	}
 	req.Header.Set("X-API-Key", c.apiKey)
+	setTraceHeaders(req, ctx)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	return req, nil
+}
+
+func setTraceHeaders(req *http.Request, ctx context.Context) {
+	if req == nil || ctx == nil {
+		return
+	}
+	traceID, ok := ctx.Value(traceContextKey).(string)
+	traceID = strings.TrimSpace(traceID)
+	if !ok || traceID == "" {
+		return
+	}
+	if req.Header.Get(traceHeaderName) == "" {
+		req.Header.Set(traceHeaderName, traceID)
+	}
+	if req.Header.Get(traceHeaderXTraceID) == "" {
+		req.Header.Set(traceHeaderXTraceID, traceID)
+	}
 }
 
 // doJSON 执行非流式请求，剥 result 壳后把 data 反序列化到 out。
@@ -63,6 +87,18 @@ func (c *Client) doJSON(ctx context.Context, method, path string, body, out any)
 	if err != nil {
 		return err
 	}
+	return c.doRequest(req, out)
+}
+
+// doRequest 执行已构造好的 HTTP 请求，剥 result 壳后把 data 反序列化到 out。
+//
+// 参数：
+//   - req: 已设置鉴权、Content-Type 等头的 HTTP 请求
+//   - out: 目标 dto 指针；为 nil 时只校验成功不解码
+//
+// 返回：
+//   - status != 200（壳内）或 HTTP 非 2xx → *APIError；网络错误原样透出
+func (c *Client) doRequest(req *http.Request, out any) error {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err

@@ -2,8 +2,10 @@ package aihubsdk
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/xsxdot/ai-hub-sdk/dto"
@@ -21,14 +23,14 @@ func newJSONServer(t *testing.T, body string, gotMethod, gotPath *string) *httpt
 
 func TestGenerateImage(t *testing.T) {
 	var m, p string
-	srv := newJSONServer(t, `{"status":200,"data":{"id":"img1","artifacts":[{"ref":"oss/x","mediaType":"image/png"}]}}`, &m, &p)
+	srv := newJSONServer(t, `{"status":200,"data":{"id":"img1","artifacts":[{"ossKey":"ai-hub/public-media/image/x.png","mediaType":"image/png"}]}}`, &m, &p)
 	defer srv.Close()
 	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
 	res, err := c.GenerateImage(context.Background(), &dto.ImageRequest{Model: "sd", Prompt: "cat"})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if res.ID != "img1" || len(res.Artifacts) != 1 || p != "/v1/images/generate" || m != http.MethodPost {
+	if res.ID != "img1" || len(res.Artifacts) != 1 || res.Artifacts[0].OSSKey != "ai-hub/public-media/image/x.png" || p != "/v1/images/generate" || m != http.MethodPost {
 		t.Fatalf("res=%+v path=%s method=%s", res, p, m)
 	}
 }
@@ -73,20 +75,22 @@ func TestDeleteVoice(t *testing.T) {
 
 func TestGenerateSpeechAndTranscribeAndCreateVoice(t *testing.T) {
 	var m, p string
-	srv := newJSONServer(t, `{"status":200,"data":{"id":"s1","audioRef":"oss/a"}}`, &m, &p)
+	srv := newJSONServer(t, `{"status":200,"data":{"id":"s1","audioOssKey":"ai-hub/public-media/audio/a.wav"}}`, &m, &p)
 	defer srv.Close()
 	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
-	if _, err := c.GenerateSpeech(context.Background(), &dto.SpeechRequest{Voice: "v", Text: "hi"}); err != nil {
+	speech, err := c.GenerateSpeech(context.Background(), &dto.SpeechRequest{Voice: "v", Text: "hi"})
+	if err != nil {
 		t.Fatalf("speech err: %v", err)
 	}
-	if p != "/v1/speech/generate" {
-		t.Fatalf("speech path=%s", p)
+	if p != "/v1/speech/generate" || speech.AudioOssKey != "ai-hub/public-media/audio/a.wav" {
+		t.Fatalf("speech=%+v path=%s", speech, p)
 	}
 
 	srv2 := newJSONServer(t, `{"status":200,"data":{"id":"t1","text":"hello"}}`, &m, &p)
 	defer srv2.Close()
 	c2 := New(WithBaseURL(srv2.URL), WithAPIKey("k"))
-	if _, err := c2.Transcribe(context.Background(), &dto.TranscribeRequest{Model: "asr", AudioURL: "http://a"}); err != nil {
+	audio := dto.URLMediaRef("http://a", "audio/mpeg")
+	if _, err := c2.Transcribe(context.Background(), &dto.TranscribeRequest{Model: "asr", Audio: &audio}); err != nil {
 		t.Fatalf("transcribe err: %v", err)
 	}
 	if p != "/v1/audio/transcriptions" {
@@ -110,11 +114,50 @@ func TestOcr(t *testing.T) {
 	srv := newJSONServer(t, `{"status":200,"data":{"model":"ocr","text":"hello","structured":{"kv_result":{"id":"42"}}}}`, &m, &p)
 	defer srv.Close()
 	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
-	res, err := c.Ocr(context.Background(), &dto.OcrRequest{Model: "ocr", ImageURL: "https://x/y.jpg", Task: dto.OcrTaskTextRecognition})
+	image := dto.URLMediaRef("https://x/y.jpg", "image/jpeg")
+	res, err := c.Ocr(context.Background(), &dto.OcrRequest{Model: "ocr", Image: &image, Task: dto.OcrTaskTextRecognition})
 	if err != nil {
 		t.Fatalf("ocr err: %v", err)
 	}
 	if res.Text != "hello" || res.Structured == nil || p != "/v1/ocr" || m != http.MethodPost {
 		t.Fatalf("res=%+v path=%s method=%s", res, p, m)
+	}
+}
+
+func TestClient_UploadMedia(t *testing.T) {
+	var gotAPIKey string
+	var gotKind string
+	var gotFilename string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAPIKey = r.Header.Get("X-API-Key")
+		gotKind = r.FormValue("kind")
+		file, header, err := r.FormFile("file")
+		if err != nil {
+			t.Fatalf("form file: %v", err)
+		}
+		defer file.Close()
+		gotFilename = header.Filename
+		raw, err := io.ReadAll(file)
+		if err != nil {
+			t.Fatalf("read file: %v", err)
+		}
+		if string(raw) != "image-bytes" {
+			t.Fatalf("raw=%q", raw)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":200,"data":{"ossKey":"ai-hub/public-media/image/20260621/a.png","mediaType":"image/png","size":11,"kind":"image"}}`))
+	}))
+	defer srv.Close()
+
+	c := New(WithBaseURL(srv.URL), WithAPIKey("key-1"))
+	res, err := c.UploadMedia(context.Background(), UploadMediaKindImage, "a.png", strings.NewReader("image-bytes"))
+	if err != nil {
+		t.Fatalf("upload media: %v", err)
+	}
+	if gotAPIKey != "key-1" || gotKind != "image" || gotFilename != "a.png" {
+		t.Fatalf("headers/form apiKey=%q kind=%q filename=%q", gotAPIKey, gotKind, gotFilename)
+	}
+	if res.OSSKey != "ai-hub/public-media/image/20260621/a.png" || res.MediaType != "image/png" || res.Size != 11 {
+		t.Fatalf("res=%+v", res)
 	}
 }
