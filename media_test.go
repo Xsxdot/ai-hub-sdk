@@ -35,9 +35,32 @@ func TestGenerateImage(t *testing.T) {
 	}
 }
 
+func TestSubmitImageJob(t *testing.T) {
+	var m, p string
+	srv := newJSONServer(t, `{"status":200,"data":{"jobId":"job-image-123"}}`, &m, &p)
+	defer srv.Close()
+	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
+
+	req := &dto.ImageJobRequest{
+		ImageRequest: dto.ImageRequest{Model: "image-pro", Prompt: "poster", N: 1},
+		CallbackURL:  "https://biz.example/callback",
+	}
+	req.SetCallbackSecret("derived-secret")
+	jobID, err := c.SubmitImageJob(context.Background(), req)
+	if err != nil {
+		t.Fatalf("submit image err: %v", err)
+	}
+	if jobID != "job-image-123" || p != "/v1/images/jobs" || m != http.MethodPost {
+		t.Fatalf("jobID=%q path=%s method=%s", jobID, p, m)
+	}
+	if req.CallbackSecret() != "derived-secret" {
+		t.Fatalf("callback secret changed: %q", req.CallbackSecret())
+	}
+}
+
 func TestSubmitVideoJobAndGetJob(t *testing.T) {
 	var m, p string
-	srvSubmit := newJSONServer(t, `{"status":200,"data":"job-123"}`, &m, &p)
+	srvSubmit := newJSONServer(t, `{"status":200,"data":{"jobId":"job-123"}}`, &m, &p)
 	defer srvSubmit.Close()
 	c := New(WithBaseURL(srvSubmit.URL), WithAPIKey("k"))
 	jobID, err := c.SubmitVideoJob(context.Background(), &dto.VideoJobRequest{Model: "v", Task: dto.VideoTaskText2Video})
@@ -55,7 +78,7 @@ func TestSubmitVideoJobAndGetJob(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get err: %v", err)
 	}
-	if res.State != dto.JobStateSucceeded || p != "/v1/videos/jobs/job-123" || m != http.MethodGet {
+	if res.State != dto.JobStateSucceeded || p != "/v1/media/jobs/job-123" || m != http.MethodGet {
 		t.Fatalf("res=%+v path=%s method=%s", res, p, m)
 	}
 }

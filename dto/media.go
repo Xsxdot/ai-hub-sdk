@@ -20,6 +20,34 @@ type ImageRequest struct {
 	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 
+// ImageJobRequest 统一图片异步任务提交请求。
+//
+// 参数：
+//   - ImageRequest: 同步图片生成的中立请求字段
+//   - CallbackURL: 业务方回调地址，空表示只轮询
+//
+// 注意：
+//   - callbackSecret 由 server HTTP 层从 API Key 派生，业务方 JSON 不能直接写入。
+//   - 同步 ImageRequest 不包含 callback 字段，避免同步接口出现无效参数。
+type ImageJobRequest struct {
+	ImageRequest
+	CallbackURL string `json:"callbackUrl,omitempty"`
+
+	callbackSecret string `json:"-"`
+}
+
+// SetCallbackSecret 注入回调签名密钥。
+//
+// 参数：
+//   - secret: hex(sha256(apiKey)) 派生值
+func (r *ImageJobRequest) SetCallbackSecret(secret string) { r.callbackSecret = secret }
+
+// CallbackSecret 返回注入的回调签名密钥。
+//
+// 返回：
+//   - HTTP 层注入的回调签名密钥；未注入时为空字符串
+func (r *ImageJobRequest) CallbackSecret() string { return r.callbackSecret }
+
 // ImageArtifact 一张生成产物，已转存为永久 OSS 引用。
 type ImageArtifact struct {
 	OSSKey    string `json:"ossKey"`    // ai-hub 发放的永久 OSS object key

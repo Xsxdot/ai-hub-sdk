@@ -17,6 +17,10 @@ import (
 	"github.com/xsxdot/ai-hub-sdk/dto"
 )
 
+type mediaJobSubmitResponse struct {
+	JobID string `json:"jobId"`
+}
+
 // GenerateImage 同步图片生成。POST /v1/images/generate。
 func (c *Client) GenerateImage(ctx context.Context, req *dto.ImageRequest) (*dto.ImageResult, error) {
 	var res dto.ImageResult
@@ -24,6 +28,15 @@ func (c *Client) GenerateImage(ctx context.Context, req *dto.ImageRequest) (*dto
 		return nil, err
 	}
 	return &res, nil
+}
+
+// SubmitImageJob 提交异步图片任务，返回业务 jobID。POST /v1/images/jobs。
+func (c *Client) SubmitImageJob(ctx context.Context, req *dto.ImageJobRequest) (string, error) {
+	var res mediaJobSubmitResponse
+	if err := c.doJSON(ctx, http.MethodPost, "/v1/images/jobs", req, &res); err != nil {
+		return "", err
+	}
+	return res.JobID, nil
 }
 
 // CreateVoice 多渠道容灾创建逻辑音色。POST /v1/voices。
@@ -69,19 +82,17 @@ func (c *Client) Ocr(ctx context.Context, req *dto.OcrRequest) (*dto.OcrResult, 
 }
 
 // SubmitVideoJob 提交异步视频任务，返回业务 jobID。POST /v1/videos/jobs。
-//
-// 注意：data 是裸字符串 jobID（server 用 result.OK 包成 {"status":200,"data":"job-x"}）。
 func (c *Client) SubmitVideoJob(ctx context.Context, req *dto.VideoJobRequest) (string, error) {
-	var jobID string
-	if err := c.doJSON(ctx, http.MethodPost, "/v1/videos/jobs", req, &jobID); err != nil {
+	var res mediaJobSubmitResponse
+	if err := c.doJSON(ctx, http.MethodPost, "/v1/videos/jobs", req, &res); err != nil {
 		return "", err
 	}
-	return jobID, nil
+	return res.JobID, nil
 }
 
-// GetJob 查询异步任务状态与结果。GET /v1/videos/jobs/:jobId。
+// GetJob 查询异步媒体任务状态与结果。GET /v1/media/jobs/:jobId。
 func (c *Client) GetJob(ctx context.Context, jobID string) (*dto.MediaJobResult, error) {
-	path := fmt.Sprintf("/v1/videos/jobs/%s", jobID)
+	path := fmt.Sprintf("/v1/media/jobs/%s", jobID)
 	var res dto.MediaJobResult
 	if err := c.doJSON(ctx, http.MethodGet, path, nil, &res); err != nil {
 		return nil, err

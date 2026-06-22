@@ -30,10 +30,12 @@ type IAIHub interface {
 //
 // 边界：
 //   - 只定义契约，不含实现（实现在 api/client）
-//   - 同步生成（图片等）直接返回结果；异步生成（视频等）返回 jobId 由业务方轮询（后续 plan）
+//   - 同步生成直接返回结果；异步生成返回 jobId，业务方通过 GetJob 或 callbackUrl 消费终态。
 type IAIHubMedia interface {
 	// GenerateImage 同步图片生成，返回已转存为永久 OSS 引用的产物。
 	GenerateImage(ctx context.Context, req *dto.ImageRequest) (*dto.ImageResult, error)
+	// SubmitImageJob 提交异步图片生成任务，返回业务 jobID。
+	SubmitImageJob(ctx context.Context, req *dto.ImageJobRequest) (jobID string, err error)
 	// CreateVoice 多渠道容灾创建逻辑音色，返回逐渠道成败明细。
 	CreateVoice(ctx context.Context, req *dto.CreateVoiceRequest) (*dto.CreateVoiceResult, error)
 	// DeleteVoice 删除逻辑音色及其全部厂商绑定。
