@@ -108,6 +108,10 @@ type VideoJobRequest struct {
 	AspectRatio AspectRatio `json:"aspectRatio,omitempty"` // 约分 W:H，见 AspectRatio
 	Resolution  Resolution  `json:"resolution,omitempty"`  // {N}p，p=垂直像素，见 Resolution
 	Duration    int         `json:"duration,omitempty"`    // 整数秒
+	// AutoAdjust 当请求时长不在命中候选的能力空间内时，是否允许 AI-HUB 自动归一化到最近合法值。
+	// 默认 false：越界直接返回 400（尊重业务方原值、不替其多计费）。
+	// true：clamp 到最近合法值并在 submit 响应回传 DurationAdjustment。
+	AutoAdjust bool `json:"auto_adjust,omitempty"`
 
 	// 逃生舱（escape hatch，非协议契约）。
 	// 注意：使用 Options 即离开中立保证；厂商私有、best-effort、逻辑模型下不推荐、
@@ -160,4 +164,18 @@ type MediaJobResult struct {
 	Usage              Usage           `json:"usage"`
 	Cost               Cost            `json:"cost"`
 	Error              string          `json:"error,omitempty"`
+}
+
+// DurationAdjustment 描述一次时长归一化结果，仅在确实发生归一化时回传。
+type DurationAdjustment struct {
+	RequestedDuration int    `json:"requestedDuration"` // 业务方原始传入的时长（秒）
+	ActualDuration    int    `json:"actualDuration"`    // 归一后实际发送给上游的时长（秒）
+	Reason            string `json:"reason"`            // 枚举：below_model_minimum / above_model_maximum / not_in_allowed_set
+}
+
+// VideoSubmitResult 视频任务提交结果。
+// JobID 始终存在；DurationAdjustment 仅在 auto_adjust 触发归一化时非空。
+type VideoSubmitResult struct {
+	JobID              string              `json:"jobId"`
+	DurationAdjustment *DurationAdjustment `json:"durationAdjustment,omitempty"`
 }

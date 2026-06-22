@@ -11,6 +11,7 @@ package dto
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -107,5 +108,34 @@ func TestMediaArtifactJSONUsesOSSKey(t *testing.T) {
 	}
 	if string(raw) != `{"ossKey":"ai-hub/public-media/video/out.mp4","mediaType":"video/mp4"}` {
 		t.Fatalf("json=%s", raw)
+	}
+}
+
+func TestVideoJobRequestAutoAdjustRoundTrip(t *testing.T) {
+	req := VideoJobRequest{Model: "video", Task: VideoTaskFirstLastFrame, Duration: 1, AutoAdjust: true}
+	raw, err := json.Marshal(req)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(raw), `"auto_adjust":true`) {
+		t.Fatalf("auto_adjust 未序列化: %s", raw)
+	}
+	var back VideoJobRequest
+	if err := json.Unmarshal(raw, &back); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if !back.AutoAdjust {
+		t.Fatalf("AutoAdjust 回环丢失")
+	}
+}
+
+func TestVideoSubmitResultAdjustment(t *testing.T) {
+	res := VideoSubmitResult{
+		JobID:              "job-1",
+		DurationAdjustment: &DurationAdjustment{RequestedDuration: 1, ActualDuration: 4, Reason: "below_model_minimum"},
+	}
+	raw, _ := json.Marshal(res)
+	if !strings.Contains(string(raw), `"durationAdjustment"`) {
+		t.Fatalf("durationAdjustment 缺失: %s", raw)
 	}
 }
