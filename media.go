@@ -81,13 +81,13 @@ func (c *Client) Ocr(ctx context.Context, req *dto.OcrRequest) (*dto.OcrResult, 
 	return &res, nil
 }
 
-// SubmitVideoJob 提交异步视频任务，返回业务 jobID。POST /v1/videos/jobs。
-func (c *Client) SubmitVideoJob(ctx context.Context, req *dto.VideoJobRequest) (string, error) {
-	var res mediaJobSubmitResponse
+// SubmitVideoJob 提交异步视频任务，返回业务 jobID 与提交期归一化信息。POST /v1/videos/jobs。
+func (c *Client) SubmitVideoJob(ctx context.Context, req *dto.VideoJobRequest) (*dto.VideoSubmitResult, error) {
+	var res dto.VideoSubmitResult
 	if err := c.doJSON(ctx, http.MethodPost, "/v1/videos/jobs", req, &res); err != nil {
-		return "", err
+		return nil, err
 	}
-	return res.JobID, nil
+	return &res, nil
 }
 
 // GetJob 查询异步媒体任务状态与结果。GET /v1/media/jobs/:jobId。

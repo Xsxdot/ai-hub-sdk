@@ -60,15 +60,15 @@ func TestSubmitImageJob(t *testing.T) {
 
 func TestSubmitVideoJobAndGetJob(t *testing.T) {
 	var m, p string
-	srvSubmit := newJSONServer(t, `{"status":200,"data":{"jobId":"job-123"}}`, &m, &p)
+	srvSubmit := newJSONServer(t, `{"status":200,"data":{"jobId":"job-123","durationAdjustment":{"requestedDuration":1,"actualDuration":4,"reason":"below_model_minimum"}}}`, &m, &p)
 	defer srvSubmit.Close()
 	c := New(WithBaseURL(srvSubmit.URL), WithAPIKey("k"))
-	jobID, err := c.SubmitVideoJob(context.Background(), &dto.VideoJobRequest{Model: "v", Task: dto.VideoTaskText2Video})
+	submit, err := c.SubmitVideoJob(context.Background(), &dto.VideoJobRequest{Model: "v", Task: dto.VideoTaskText2Video})
 	if err != nil {
 		t.Fatalf("submit err: %v", err)
 	}
-	if jobID != "job-123" || p != "/v1/videos/jobs" {
-		t.Fatalf("jobID=%q path=%s", jobID, p)
+	if submit.JobID != "job-123" || submit.DurationAdjustment == nil || submit.DurationAdjustment.ActualDuration != 4 || p != "/v1/videos/jobs" {
+		t.Fatalf("submit=%+v path=%s", submit, p)
 	}
 
 	srvGet := newJSONServer(t, `{"status":200,"data":{"jobId":"job-123","state":"succeeded"}}`, &m, &p)

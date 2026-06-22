@@ -171,7 +171,7 @@ func runImage(ctx context.Context, client *aihubsdk.Client, cfg Config, log *slo
 }
 
 func runVideo(ctx context.Context, client *aihubsdk.Client, cfg Config, log *slog.Logger) error {
-	jobID, err := client.SubmitVideoJob(ctx, &dto.VideoJobRequest{
+	submit, err := client.SubmitVideoJob(ctx, &dto.VideoJobRequest{
 		Model:    cfg.VideoModel,
 		Task:     dto.VideoTaskText2Video,
 		Prompt:   cfg.VideoPrompt,
@@ -180,6 +180,7 @@ func runVideo(ctx context.Context, client *aihubsdk.Client, cfg Config, log *slo
 	if err != nil {
 		return err
 	}
+	jobID := submit.JobID
 	log.Info("video job submitted", "jobID", jobID)
 
 	if !cfg.WaitVideo {

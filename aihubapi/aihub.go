@@ -30,7 +30,7 @@ type IAIHub interface {
 //
 // 边界：
 //   - 只定义契约，不含实现（实现在 api/client）
-//   - 同步生成直接返回结果；异步生成返回 jobId，业务方通过 GetJob 或 callbackUrl 消费终态。
+//   - 同步生成直接返回结果；异步生成返回 submit 结果，业务方通过 GetJob 或 callbackUrl 消费终态。
 type IAIHubMedia interface {
 	// GenerateImage 同步图片生成，返回已转存为永久 OSS 引用的产物。
 	GenerateImage(ctx context.Context, req *dto.ImageRequest) (*dto.ImageResult, error)
@@ -46,8 +46,8 @@ type IAIHubMedia interface {
 	Transcribe(ctx context.Context, req *dto.TranscribeRequest) (*dto.TranscribeResult, error)
 	// Ocr 同步 OCR 识别，输入 OSS key 或公网图像 URL，返回文本与可选结构化结果。
 	Ocr(ctx context.Context, req *dto.OcrRequest) (*dto.OcrResult, error)
-	// SubmitVideoJob 提交异步视频生成任务，返回业务 jobID。
-	SubmitVideoJob(ctx context.Context, req *dto.VideoJobRequest) (jobID string, err error)
+	// SubmitVideoJob 提交异步视频生成任务，返回业务 jobID 与提交期归一化信息。
+	SubmitVideoJob(ctx context.Context, req *dto.VideoJobRequest) (*dto.VideoSubmitResult, error)
 	// GetJob 查询异步任务状态与结果（业务方轮询）。
 	GetJob(ctx context.Context, jobID string) (*dto.MediaJobResult, error)
 }
