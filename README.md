@@ -57,11 +57,28 @@ for ev := range ch {
 
 - `GenerateImage` / `GenerateSpeech` / `Transcribe`：同步返回（产物为永久 OSS 引用）。
 - `CreateVoice` / `DeleteVoice`：逻辑音色管理。
-- `SubmitVideoJob` 返回 jobID；`GetJob(jobID)` 轮询直到 `state == succeeded/failed`。
+- `SubmitImageJob` / `SubmitVideoJob` 返回 jobID；`GetJob(jobID)` 通过统一 `/v1/media/jobs/{jobId}` 轮询直到 `state == succeeded/failed`。
 
-## 视频回调
+### 异步图片
 
-提交时填 `CallbackURL` 即启用回调（不填则用 `GetJob` 轮询）。签名密钥由 ai-hub 从你的 API Key 派生，你无需传任何密钥：
+```go
+jobID, err := c.SubmitImageJob(ctx, &dto.ImageJobRequest{
+	ImageRequest: dto.ImageRequest{
+		Model:  "image-pro",
+		Prompt: "poster",
+		N:      1,
+	},
+	CallbackURL: "https://your.app/aihub/callback",
+})
+if err != nil {
+	return err
+}
+job, err := c.GetJob(ctx, jobID)
+```
+
+## 异步任务回调
+
+图片或视频提交时填 `CallbackURL` 即启用回调（不填则用 `GetJob` 轮询）。签名密钥由 ai-hub 从你的 API Key 派生，你无需传任何密钥：
 
 ```go
 jobID, err := c.SubmitVideoJob(ctx, &dto.VideoJobRequest{
