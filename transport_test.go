@@ -35,6 +35,22 @@ func TestDoJSON_UnwrapsResultShell(t *testing.T) {
 	}
 }
 
+func TestNewRequest_PropagatesTraceHeadersFromContext(t *testing.T) {
+	ctx := context.WithValue(context.Background(), "traceId", "sdk-trace-1")
+	c := New(WithBaseURL("https://aihub.example"), WithAPIKey("k"))
+
+	req, err := c.newRequest(ctx, http.MethodPost, "/v1/echo", map[string]string{"x": "y"})
+	if err != nil {
+		t.Fatalf("newRequest err: %v", err)
+	}
+	if got := req.Header.Get("Trace-Head"); got != "sdk-trace-1" {
+		t.Fatalf("Trace-Head = %q, want sdk trace", got)
+	}
+	if got := req.Header.Get("X-Trace-Id"); got != "sdk-trace-1" {
+		t.Fatalf("X-Trace-Id = %q, want sdk trace", got)
+	}
+}
+
 func TestDoJSON_401ReturnsAPIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
@@ -51,6 +67,36 @@ func TestDoJSON_401ReturnsAPIError(t *testing.T) {
 	}
 	if apiErr.Status != 401 {
 		t.Fatalf("status = %d", apiErr.Status)
+	}
+}
+
+func TestDoSSE_PropagatesTraceHeadersFromContext(t *testing.T) {
+	var gotTraceHead string
+	var gotXTraceID string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotTraceHead = r.Header.Get("Trace-Head")
+		gotXTraceID = r.Header.Get("X-Trace-Id")
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(200)
+		fl := w.(http.Flusher)
+		w.Write([]byte("data: {\"type\":\"message_stop\"}\n\n"))
+		fl.Flush()
+	}))
+	defer srv.Close()
+
+	ctx := context.WithValue(context.Background(), "traceId", "sdk-trace-sse-1")
+	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
+	ch, err := c.doSSE(ctx, "/v1/echo-stream", map[string]bool{"stream": true})
+	if err != nil {
+		t.Fatalf("doSSE err: %v", err)
+	}
+	for range ch {
+	}
+	if gotTraceHead != "sdk-trace-sse-1" {
+		t.Fatalf("Trace-Head = %q, want sdk trace", gotTraceHead)
+	}
+	if gotXTraceID != "sdk-trace-sse-1" {
+		t.Fatalf("X-Trace-Id = %q, want sdk trace", gotXTraceID)
 	}
 }
 
