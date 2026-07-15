@@ -43,6 +43,29 @@ func TestChatRequest_JSONRoundTrip(t *testing.T) {
 	assert.Equal(t, ThinkingHigh, got.Thinking.Level)
 }
 
+func TestChatRequest_VideoContentBlockFPSRoundTrip(t *testing.T) {
+	req := ChatRequest{
+		Model: "smart-video",
+		Messages: []Message{{
+			Role: RoleUser,
+			Content: []ContentBlock{
+				{Type: BlockText, Text: "分析这段视频"},
+				{Type: BlockVideo, Media: mediaRefPtr(URLMediaRef("https://x/video.mp4", "video/mp4")), FPS: 2.5},
+			},
+		}},
+	}
+
+	raw, err := json.Marshal(req)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"fps":2.5`)
+
+	var got ChatRequest
+	require.NoError(t, json.Unmarshal(raw, &got))
+	require.Len(t, got.Messages, 1)
+	require.Len(t, got.Messages[0].Content, 2)
+	assert.Equal(t, 2.5, got.Messages[0].Content[1].FPS)
+}
+
 func TestThinkingLevel_JSONRoundTripMedium(t *testing.T) {
 	raw, err := json.Marshal(&ThinkingConfig{Enabled: true, Level: ThinkingMedium})
 	require.NoError(t, err)

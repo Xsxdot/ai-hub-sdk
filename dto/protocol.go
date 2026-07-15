@@ -38,6 +38,8 @@ type ContentBlock struct {
 	Text string `json:"text,omitempty"`
 	// image/video：使用显式 MediaRef 区分公网 URL 与 ai-hub 发放的 ossKey。
 	Media *MediaRef `json:"media,omitempty"`
+	// video：视频理解抽帧频率。0 表示调用方未显式指定，由 server codec 使用默认值。
+	FPS float64 `json:"fps,omitempty"`
 	// tool_use
 	ID    string         `json:"id,omitempty"`
 	Name  string         `json:"name,omitempty"`
