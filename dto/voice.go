@@ -30,10 +30,10 @@ type VoiceBindingResult struct {
 	ChannelModelID int64  `json:"channelModelId"`
 	BindingID      int64  `json:"bindingId,omitempty"`
 	VendorVoiceID  string `json:"vendorVoiceId,omitempty"`
-	OSSKey         string `json:"ossKey,omitempty"`
-	URL            string `json:"url,omitempty"`
-	URLExpiresAt   int64  `json:"urlExpiresAt,omitempty"`
-	MediaType      string `json:"mediaType,omitempty"`
+	OSSKey         string `json:"ossKey"`
+	URL            string `json:"url"`
+	URLExpiresAt   int64  `json:"urlExpiresAt"`
+	MediaType      string `json:"mediaType"`
 	// PreviewOssKey 是预览音频的旧 OSS key 字段。
 	//
 	// Deprecated: 使用 OSSKey；兼容窗口内两者由服务端保持同值。

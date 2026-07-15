@@ -23,14 +23,18 @@ func newJSONServer(t *testing.T, body string, gotMethod, gotPath *string) *httpt
 
 func TestGenerateImage(t *testing.T) {
 	var m, p string
-	srv := newJSONServer(t, `{"status":200,"data":{"id":"img1","artifacts":[{"ossKey":"ai-hub/public-media/image/x.png","mediaType":"image/png"}]}}`, &m, &p)
+	srv := newJSONServer(t, `{"status":200,"data":{"id":"img1","artifacts":[{"ossKey":"ai-hub/public-media/image/x.png","url":"https://public.example.com/x.png?signature=secret","urlExpiresAt":1784073600000,"mediaType":"image/png"}]}}`, &m, &p)
 	defer srv.Close()
 	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
 	res, err := c.GenerateImage(context.Background(), &dto.ImageRequest{Model: "sd", Prompt: "cat"})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if res.ID != "img1" || len(res.Artifacts) != 1 || res.Artifacts[0].OSSKey != "ai-hub/public-media/image/x.png" || p != "/v1/images/generate" || m != http.MethodPost {
+	if res.ID != "img1" || len(res.Artifacts) != 1 ||
+		res.Artifacts[0].OSSKey != "ai-hub/public-media/image/x.png" ||
+		res.Artifacts[0].URL != "https://public.example.com/x.png?signature=secret" ||
+		res.Artifacts[0].URLExpiresAt != 1784073600000 || res.Artifacts[0].MediaType != "image/png" ||
+		p != "/v1/images/generate" || m != http.MethodPost {
 		t.Fatalf("res=%+v path=%s method=%s", res, p, m)
 	}
 }
@@ -111,14 +115,17 @@ func TestSubmitVideoJobAndGetJob(t *testing.T) {
 		t.Fatalf("submit=%+v path=%s", submit, p)
 	}
 
-	srvGet := newJSONServer(t, `{"status":200,"data":{"jobId":"job-123","state":"succeeded"}}`, &m, &p)
+	srvGet := newJSONServer(t, `{"status":200,"data":{"jobId":"job-123","state":"succeeded","artifacts":[{"ossKey":"ai-hub/public-media/video/out.mp4","url":"https://public.example.com/out.mp4?signature=secret","urlExpiresAt":1784073600000,"mediaType":"video/mp4"}]}}`, &m, &p)
 	defer srvGet.Close()
 	c2 := New(WithBaseURL(srvGet.URL), WithAPIKey("k"))
 	res, err := c2.GetJob(context.Background(), "job-123")
 	if err != nil {
 		t.Fatalf("get err: %v", err)
 	}
-	if res.State != dto.JobStateSucceeded || p != "/v1/media/jobs/job-123" || m != http.MethodGet {
+	if res.State != dto.JobStateSucceeded || len(res.Artifacts) != 1 ||
+		res.Artifacts[0].URL != "https://public.example.com/out.mp4?signature=secret" ||
+		res.Artifacts[0].URLExpiresAt != 1784073600000 ||
+		p != "/v1/media/jobs/job-123" || m != http.MethodGet {
 		t.Fatalf("res=%+v path=%s method=%s", res, p, m)
 	}
 }
@@ -138,14 +145,16 @@ func TestDeleteVoice(t *testing.T) {
 
 func TestGenerateSpeechAndTranscribeAndCreateVoice(t *testing.T) {
 	var m, p string
-	srv := newJSONServer(t, `{"status":200,"data":{"id":"s1","audioOssKey":"ai-hub/public-media/audio/a.wav"}}`, &m, &p)
+	srv := newJSONServer(t, `{"status":200,"data":{"id":"s1","ossKey":"ai-hub/public-media/audio/a.wav","url":"https://public.example.com/a.wav?signature=secret","urlExpiresAt":1784073600000,"audioOssKey":"ai-hub/public-media/audio/a.wav","mediaType":"audio/wav"}}`, &m, &p)
 	defer srv.Close()
 	c := New(WithBaseURL(srv.URL), WithAPIKey("k"))
 	speech, err := c.GenerateSpeech(context.Background(), &dto.SpeechRequest{Voice: "v", Text: "hi"})
 	if err != nil {
 		t.Fatalf("speech err: %v", err)
 	}
-	if p != "/v1/speech/generate" || speech.AudioOssKey != "ai-hub/public-media/audio/a.wav" {
+	if p != "/v1/speech/generate" || speech.OSSKey != "ai-hub/public-media/audio/a.wav" ||
+		speech.AudioOssKey != speech.OSSKey || speech.URL != "https://public.example.com/a.wav?signature=secret" ||
+		speech.URLExpiresAt != 1784073600000 || speech.MediaType != "audio/wav" {
 		t.Fatalf("speech=%+v path=%s", speech, p)
 	}
 
@@ -160,14 +169,18 @@ func TestGenerateSpeechAndTranscribeAndCreateVoice(t *testing.T) {
 		t.Fatalf("transcribe path=%s", p)
 	}
 
-	srv3 := newJSONServer(t, `{"status":200,"data":{"logicalVoiceId":7}}`, &m, &p)
+	srv3 := newJSONServer(t, `{"status":200,"data":{"logicalVoiceId":7,"succeeded":[{"channelModelId":1,"bindingId":2,"vendorVoiceId":"voice-1","ossKey":"ai-hub/public-media/audio/preview.wav","url":"https://public.example.com/preview.wav?signature=secret","urlExpiresAt":1784073600000,"mediaType":"audio/wav","previewOssKey":"ai-hub/public-media/audio/preview.wav","previewMediaType":"audio/wav"}],"failed":[]}}`, &m, &p)
 	defer srv3.Close()
 	c3 := New(WithBaseURL(srv3.URL), WithAPIKey("k"))
 	res, err := c3.CreateVoice(context.Background(), &dto.CreateVoiceRequest{Name: "n", Source: dto.VoiceSourceClone})
 	if err != nil {
 		t.Fatalf("createvoice err: %v", err)
 	}
-	if res.LogicalVoiceID != 7 || p != "/v1/voices" {
+	if res.LogicalVoiceID != 7 || len(res.Succeeded) != 1 ||
+		res.Succeeded[0].URL != "https://public.example.com/preview.wav?signature=secret" ||
+		res.Succeeded[0].URLExpiresAt != 1784073600000 ||
+		res.Succeeded[0].PreviewOssKey != res.Succeeded[0].OSSKey ||
+		res.Succeeded[0].PreviewMediaType != res.Succeeded[0].MediaType || p != "/v1/voices" {
 		t.Fatalf("res=%+v path=%s", res, p)
 	}
 }
