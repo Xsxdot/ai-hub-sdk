@@ -10,6 +10,7 @@ package dto
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -50,7 +51,7 @@ func TestMediaRefRejectsAmbiguousValues(t *testing.T) {
 	}
 }
 
-func TestImageAndVoiceContractsUseMediaRefAndOSSKey(t *testing.T) {
+func TestImageAndVoiceContractsUseUnifiedMediaArtifact(t *testing.T) {
 	imageReq := ImageRequest{
 		Model:     "image-model",
 		Prompt:    "cat",
@@ -64,12 +65,17 @@ func TestImageAndVoiceContractsUseMediaRefAndOSSKey(t *testing.T) {
 		t.Fatalf("image json=%s", rawImageReq)
 	}
 
-	imageArtifact := ImageArtifact{OSSKey: "ai-hub/public-media/image/out.png", MediaType: "image/png"}
+	imageArtifact := ImageArtifact{
+		OSSKey:       "ai-hub/public-media/image/out.png",
+		URL:          "https://public.example.com/out.png?token=secret",
+		URLExpiresAt: 1784073600000,
+		MediaType:    "image/png",
+	}
 	rawImageArtifact, err := json.Marshal(imageArtifact)
 	if err != nil {
 		t.Fatalf("marshal image artifact: %v", err)
 	}
-	if string(rawImageArtifact) != `{"ossKey":"ai-hub/public-media/image/out.png","mediaType":"image/png"}` {
+	if string(rawImageArtifact) != `{"ossKey":"ai-hub/public-media/image/out.png","url":"https://public.example.com/out.png?token=secret","urlExpiresAt":1784073600000,"mediaType":"image/png"}` {
 		t.Fatalf("image artifact json=%s", rawImageArtifact)
 	}
 
@@ -83,23 +89,39 @@ func TestImageAndVoiceContractsUseMediaRefAndOSSKey(t *testing.T) {
 		t.Fatalf("create voice json=%s", rawCreateVoice)
 	}
 
-	voiceBinding := VoiceBindingResult{ChannelModelID: 1, PreviewOssKey: "ai-hub/public-media/audio/preview.wav", PreviewMediaType: "audio/wav"}
+	voiceBinding := VoiceBindingResult{
+		ChannelModelID:   1,
+		OSSKey:           "ai-hub/public-media/audio/preview.wav",
+		URL:              "https://public.example.com/preview.wav?token=secret",
+		URLExpiresAt:     1784073600000,
+		MediaType:        "audio/wav",
+		PreviewOssKey:    "ai-hub/public-media/audio/preview.wav",
+		PreviewMediaType: "audio/wav",
+	}
 	rawVoiceBinding, err := json.Marshal(voiceBinding)
 	if err != nil {
 		t.Fatalf("marshal voice binding: %v", err)
 	}
-	if string(rawVoiceBinding) != `{"channelModelId":1,"previewOssKey":"ai-hub/public-media/audio/preview.wav","previewMediaType":"audio/wav"}` {
-		t.Fatalf("voice binding json=%s", rawVoiceBinding)
-	}
+	assertUnifiedArtifactJSON(t, rawVoiceBinding, "ai-hub/public-media/audio/preview.wav", "audio/wav")
+	assertJSONField(t, rawVoiceBinding, "previewOssKey", "ai-hub/public-media/audio/preview.wav")
+	assertJSONField(t, rawVoiceBinding, "previewMediaType", "audio/wav")
 
-	speech := SpeechResult{ID: "speech-1", Voice: "v", ActualChannelModel: "cm", AudioOssKey: "ai-hub/public-media/audio/out.wav", MediaType: "audio/wav"}
+	speech := SpeechResult{
+		ID:                 "speech-1",
+		Voice:              "v",
+		ActualChannelModel: "cm",
+		OSSKey:             "ai-hub/public-media/audio/out.wav",
+		URL:                "https://public.example.com/out.wav?token=secret",
+		URLExpiresAt:       1784073600000,
+		AudioOssKey:        "ai-hub/public-media/audio/out.wav",
+		MediaType:          "audio/wav",
+	}
 	rawSpeech, err := json.Marshal(speech)
 	if err != nil {
 		t.Fatalf("marshal speech: %v", err)
 	}
-	if string(rawSpeech) != `{"id":"speech-1","voice":"v","actualChannelModel":"cm","audioOssKey":"ai-hub/public-media/audio/out.wav","mediaType":"audio/wav","usage":{"metrics":null},"cost":{"details":null,"total":0,"currency":""}}` {
-		t.Fatalf("speech json=%s", rawSpeech)
-	}
+	assertUnifiedArtifactJSON(t, rawSpeech, "ai-hub/public-media/audio/out.wav", "audio/wav")
+	assertJSONField(t, rawSpeech, "audioOssKey", "ai-hub/public-media/audio/out.wav")
 
 	transcribe := TranscribeRequest{Model: "asr", Audio: &audio}
 	rawTranscribe, err := json.Marshal(transcribe)
@@ -109,6 +131,59 @@ func TestImageAndVoiceContractsUseMediaRefAndOSSKey(t *testing.T) {
 	if string(rawTranscribe) != `{"model":"asr","audio":{"type":"ossKey","ossKey":"ai-hub/public-media/audio/ref.wav","mediaType":"audio/wav"}}` {
 		t.Fatalf("transcribe json=%s", rawTranscribe)
 	}
+}
+
+func TestMediaUploadResultUsesUnifiedMediaArtifact(t *testing.T) {
+	result := MediaUploadResult{
+		OSSKey:       "ai-hub/public-media/video/out.mp4",
+		URL:          "https://public.example.com/out.mp4?token=secret",
+		URLExpiresAt: 1784073600000,
+		MediaType:    "video/mp4",
+		Size:         42,
+		Kind:         "video",
+	}
+	raw, err := json.Marshal(result)
+	if err != nil {
+		t.Fatalf("marshal upload result: %v", err)
+	}
+	assertUnifiedArtifactJSON(t, raw, "ai-hub/public-media/video/out.mp4", "video/mp4")
+	assertJSONField(t, raw, "kind", "video")
+}
+
+func assertUnifiedArtifactJSON(t *testing.T, raw []byte, ossKey, mediaType string) {
+	t.Helper()
+	assertJSONField(t, raw, "ossKey", ossKey)
+	assertJSONField(t, raw, "url", "https://public.example.com/"+artifactFilename(ossKey)+"?token=secret")
+	assertJSONField(t, raw, "mediaType", mediaType)
+
+	var fields map[string]any
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatalf("unmarshal artifact json: %v", err)
+	}
+	if got := fields["urlExpiresAt"]; got != float64(1784073600000) {
+		t.Fatalf("urlExpiresAt=%v", got)
+	}
+	for _, forbidden := range []string{"audioUrl", "previewUrl", "videoUrl"} {
+		if _, exists := fields[forbidden]; exists {
+			t.Fatalf("forbidden field %q in %s", forbidden, raw)
+		}
+	}
+}
+
+func assertJSONField(t *testing.T, raw []byte, field, want string) {
+	t.Helper()
+	var fields map[string]any
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		t.Fatalf("unmarshal json: %v", err)
+	}
+	if got := fields[field]; got != want {
+		t.Fatalf("%s=%v, want %q; json=%s", field, got, want, raw)
+	}
+}
+
+func artifactFilename(ossKey string) string {
+	parts := strings.Split(ossKey, "/")
+	return parts[len(parts)-1]
 }
 
 func mediaRefPtr(ref MediaRef) *MediaRef {

@@ -46,6 +46,6 @@ Observed against `http://localhost:10100` on 2026-06-18 with the logical models 
 
 - Chat passed.
 - Chat stream passed with `AIHUB_RUN_STREAM=true`.
-- Image passed and returned a `media/image/.../0.png` artifact reference.
+- Image passed and returned a unified artifact with a permanent `OSSKey` and temporary public `URL`.
 - Video reached `/v1/videos/jobs`, then the server returned `500` because the upstream distributor had no configured channel for the mapped `veo_3_1` model.
 - ASR reached `/v1/audio/transcriptions`, then the upstream `qwen3-asr-flash` call failed because it timed out downloading the default GitHub sample audio. Re-run with `AIHUB_AUDIO_URL` pointing at a provider-reachable audio file.

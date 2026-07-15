@@ -48,11 +48,10 @@ func (r *ImageJobRequest) SetCallbackSecret(secret string) { r.callbackSecret = 
 //   - HTTP 层注入的回调签名密钥；未注入时为空字符串
 func (r *ImageJobRequest) CallbackSecret() string { return r.callbackSecret }
 
-// ImageArtifact 一张生成产物，已转存为永久 OSS 引用。
-type ImageArtifact struct {
-	OSSKey    string `json:"ossKey"`    // ai-hub 发放的永久 OSS object key
-	MediaType string `json:"mediaType"` // 如 image/png
-}
+// ImageArtifact 是统一 MediaArtifact 的兼容别名。
+//
+// Deprecated: 新代码统一使用 MediaArtifact；别名仅保留现有调用方源码兼容性。
+type ImageArtifact = MediaArtifact
 
 // ImageResult 统一图片生成结果（非流式）。
 type ImageResult struct {

@@ -77,8 +77,10 @@ func (r MediaRef) Validate() error {
 
 // MediaUploadResult 是 POST /v1/media 返回的上传结果。
 type MediaUploadResult struct {
-	OSSKey    string `json:"ossKey"`
-	MediaType string `json:"mediaType"`
-	Size      int    `json:"size"`
-	Kind      string `json:"kind"`
+	OSSKey       string `json:"ossKey"`
+	URL          string `json:"url"`
+	URLExpiresAt int64  `json:"urlExpiresAt"`
+	MediaType    string `json:"mediaType"`
+	Size         int    `json:"size"`
+	Kind         string `json:"kind"`
 }

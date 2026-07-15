@@ -32,6 +32,8 @@ type IAIHub interface {
 //   - 只定义契约，不含实现（实现在 api/client）
 //   - 同步生成直接返回结果；异步生成返回 submit 结果，业务方通过 GetJob 或 callbackUrl 消费终态。
 type IAIHubMedia interface {
+	// ResolveMedia 为一个 AI-HUB 媒体对象刷新临时公网访问地址。
+	ResolveMedia(ctx context.Context, req *dto.ResolveMediaRequest) (*dto.MediaArtifact, error)
 	// GenerateImage 同步图片生成，返回已转存为永久 OSS 引用的产物。
 	GenerateImage(ctx context.Context, req *dto.ImageRequest) (*dto.ImageResult, error)
 	// SubmitImageJob 提交异步图片生成任务，返回业务 jobID。

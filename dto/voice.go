@@ -27,10 +27,20 @@ type CreateVoiceRequest struct {
 
 // VoiceBindingResult 单个渠道绑定的创建结果。
 type VoiceBindingResult struct {
-	ChannelModelID   int64  `json:"channelModelId"`
-	BindingID        int64  `json:"bindingId,omitempty"`
-	VendorVoiceID    string `json:"vendorVoiceId,omitempty"`
-	PreviewOssKey    string `json:"previewOssKey,omitempty"`
+	ChannelModelID int64  `json:"channelModelId"`
+	BindingID      int64  `json:"bindingId,omitempty"`
+	VendorVoiceID  string `json:"vendorVoiceId,omitempty"`
+	OSSKey         string `json:"ossKey,omitempty"`
+	URL            string `json:"url,omitempty"`
+	URLExpiresAt   int64  `json:"urlExpiresAt,omitempty"`
+	MediaType      string `json:"mediaType,omitempty"`
+	// PreviewOssKey 是预览音频的旧 OSS key 字段。
+	//
+	// Deprecated: 使用 OSSKey；兼容窗口内两者由服务端保持同值。
+	PreviewOssKey string `json:"previewOssKey,omitempty"`
+	// PreviewMediaType 是预览音频的旧媒体类型字段。
+	//
+	// Deprecated: 使用 MediaType；兼容窗口内两者由服务端保持同值。
 	PreviewMediaType string `json:"previewMediaType,omitempty"`
 	Reason           string `json:"reason,omitempty"` // 失败原因
 }
@@ -59,10 +69,16 @@ type SpeechResult struct {
 	Voice              string `json:"voice"`
 	VoiceBindingID     int64  `json:"voiceBindingId,omitempty"`
 	ActualChannelModel string `json:"actualChannelModel"`
-	AudioOssKey        string `json:"audioOssKey"` // 永久 OSS 引用
-	MediaType          string `json:"mediaType"`
-	Usage              Usage  `json:"usage"`
-	Cost               Cost   `json:"cost"`
+	OSSKey             string `json:"ossKey"`
+	URL                string `json:"url"`
+	URLExpiresAt       int64  `json:"urlExpiresAt"`
+	// AudioOssKey 是 TTS 音频的旧 OSS key 字段。
+	//
+	// Deprecated: 使用 OSSKey；兼容窗口内两者由服务端保持同值。
+	AudioOssKey string `json:"audioOssKey"`
+	MediaType   string `json:"mediaType"`
+	Usage       Usage  `json:"usage"`
+	Cost        Cost   `json:"cost"`
 }
 
 // TranscribeRequest ASR 识别请求。

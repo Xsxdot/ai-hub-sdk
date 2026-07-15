@@ -30,6 +30,23 @@ func (c *Client) GenerateImage(ctx context.Context, req *dto.ImageRequest) (*dto
 	return &res, nil
 }
 
+// ResolveMedia 为一个 AI-HUB 媒体对象刷新临时公网访问地址。POST /v1/media/resolve。
+//
+// 参数：
+//   - ctx: 控制请求超时与取消的上下文
+//   - req: AI-HUB ossKey 与可选媒体类型；有效期由服务端决定
+//
+// 返回：
+//   - 包含稳定 ossKey、临时 url、过期时间和媒体类型的统一媒体产物
+//   - HTTP、协议或服务端返回的错误
+func (c *Client) ResolveMedia(ctx context.Context, req *dto.ResolveMediaRequest) (*dto.MediaArtifact, error) {
+	var res dto.MediaArtifact
+	if err := c.doJSON(ctx, http.MethodPost, "/v1/media/resolve", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 // SubmitImageJob 提交异步图片任务，返回业务 jobID。POST /v1/images/jobs。
 func (c *Client) SubmitImageJob(ctx context.Context, req *dto.ImageJobRequest) (string, error) {
 	var res mediaJobSubmitResponse

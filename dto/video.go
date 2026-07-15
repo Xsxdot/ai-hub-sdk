@@ -147,12 +147,6 @@ const (
 	JobStateFailed     JobState = "failed"
 )
 
-// MediaArtifact 永久 OSS 产物引用。
-type MediaArtifact struct {
-	OSSKey    string `json:"ossKey"`
-	MediaType string `json:"mediaType"`
-}
-
 // MediaJobResult 业务方查询的 job 结果。
 type MediaJobResult struct {
 	JobID              string          `json:"jobId"`

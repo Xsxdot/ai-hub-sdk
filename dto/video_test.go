@@ -100,14 +100,25 @@ func TestVideoCoreParamValidators(t *testing.T) {
 	}
 }
 
-func TestMediaArtifactJSONUsesOSSKey(t *testing.T) {
-	artifact := MediaArtifact{OSSKey: "ai-hub/public-media/video/out.mp4", MediaType: "video/mp4"}
+func TestMediaArtifactJSONUsesUnifiedDeliveryFields(t *testing.T) {
+	artifact := MediaArtifact{
+		OSSKey:       "ai-hub/public-media/video/out.mp4",
+		URL:          "https://public.example.com/out.mp4?token=secret",
+		URLExpiresAt: 1784073600000,
+		MediaType:    "video/mp4",
+	}
 	raw, err := json.Marshal(artifact)
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
 	}
-	if string(raw) != `{"ossKey":"ai-hub/public-media/video/out.mp4","mediaType":"video/mp4"}` {
+	if string(raw) != `{"ossKey":"ai-hub/public-media/video/out.mp4","url":"https://public.example.com/out.mp4?token=secret","urlExpiresAt":1784073600000,"mediaType":"video/mp4"}` {
 		t.Fatalf("json=%s", raw)
+	}
+
+	// 图片产物必须是同一契约的别名，避免两份定义后续再次漂移。
+	var imageArtifact MediaArtifact = ImageArtifact(artifact)
+	if imageArtifact.URL != artifact.URL {
+		t.Fatalf("image artifact url=%q, want %q", imageArtifact.URL, artifact.URL)
 	}
 }
 

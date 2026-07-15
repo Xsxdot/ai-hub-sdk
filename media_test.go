@@ -35,6 +35,46 @@ func TestGenerateImage(t *testing.T) {
 	}
 }
 
+func TestResolveMedia(t *testing.T) {
+	var gotMethod string
+	var gotPath string
+	var gotAPIKey string
+	var gotBody string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotAPIKey = r.Header.Get("X-API-Key")
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Fatalf("read resolve body: %v", err)
+		}
+		gotBody = string(raw)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":200,"data":{"ossKey":"ai-hub/public-media/audio/a.wav","url":"https://public.example.com/a.wav?token=secret","urlExpiresAt":1784073600000,"mediaType":"audio/wav"}}`))
+	}))
+	defer srv.Close()
+
+	c := New(WithBaseURL(srv.URL), WithAPIKey("key-1"))
+	artifact, err := c.ResolveMedia(context.Background(), &dto.ResolveMediaRequest{
+		OSSKey:    "ai-hub/public-media/audio/a.wav",
+		MediaType: "audio/wav",
+	})
+	if err != nil {
+		t.Fatalf("resolve media: %v", err)
+	}
+	if gotMethod != http.MethodPost || gotPath != "/v1/media/resolve" || gotAPIKey != "key-1" {
+		t.Fatalf("method=%q path=%q apiKey=%q", gotMethod, gotPath, gotAPIKey)
+	}
+	if gotBody != `{"ossKey":"ai-hub/public-media/audio/a.wav","mediaType":"audio/wav"}` {
+		t.Fatalf("body=%s", gotBody)
+	}
+	if artifact.OSSKey != "ai-hub/public-media/audio/a.wav" ||
+		artifact.URL != "https://public.example.com/a.wav?token=secret" ||
+		artifact.URLExpiresAt != 1784073600000 || artifact.MediaType != "audio/wav" {
+		t.Fatalf("artifact=%+v", artifact)
+	}
+}
+
 func TestSubmitImageJob(t *testing.T) {
 	var m, p string
 	srv := newJSONServer(t, `{"status":200,"data":{"jobId":"job-image-123"}}`, &m, &p)
@@ -168,7 +208,7 @@ func TestClient_UploadMedia(t *testing.T) {
 			t.Fatalf("raw=%q", raw)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"status":200,"data":{"ossKey":"ai-hub/public-media/image/20260621/a.png","mediaType":"image/png","size":11,"kind":"image"}}`))
+		_, _ = w.Write([]byte(`{"status":200,"data":{"ossKey":"ai-hub/public-media/image/20260621/a.png","url":"https://public.example.com/a.png?signature=secret","urlExpiresAt":1784073600000,"mediaType":"image/png","size":11,"kind":"image"}}`))
 	}))
 	defer srv.Close()
 
@@ -180,7 +220,9 @@ func TestClient_UploadMedia(t *testing.T) {
 	if gotAPIKey != "key-1" || gotKind != "image" || gotFilename != "a.png" {
 		t.Fatalf("headers/form apiKey=%q kind=%q filename=%q", gotAPIKey, gotKind, gotFilename)
 	}
-	if res.OSSKey != "ai-hub/public-media/image/20260621/a.png" || res.MediaType != "image/png" || res.Size != 11 {
+	if res.OSSKey != "ai-hub/public-media/image/20260621/a.png" ||
+		res.URL != "https://public.example.com/a.png?signature=secret" ||
+		res.URLExpiresAt != 1784073600000 || res.MediaType != "image/png" || res.Size != 11 {
 		t.Fatalf("res=%+v", res)
 	}
 }

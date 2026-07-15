@@ -55,9 +55,78 @@ for ev := range ch {
 
 ## 多模态
 
-- `GenerateImage` / `GenerateSpeech` / `Transcribe`：同步返回（产物为永久 OSS 引用）。
+- `UploadMedia` / `GenerateImage` / `GenerateSpeech`：返回永久 OSS 身份和临时公网 URL。
 - `CreateVoice` / `DeleteVoice`：逻辑音色管理。
 - `SubmitImageJob` / `SubmitVideoJob` 返回 jobID；`GetJob(jobID)` 通过统一 `/v1/media/jobs/{jobId}` 轮询直到 `state == succeeded/failed`。
+
+### 统一媒体产物
+
+图片、视频和音频统一使用 `dto.MediaArtifact` 的四个字段：
+
+```json
+{
+  "ossKey": "media/image/20260617/example.png",
+  "url": "https://public.example.com/media/image/20260617/example.png?signature=...",
+  "urlExpiresAt": 1784347200000,
+  "mediaType": "image/png"
+}
+```
+
+- `OSSKey` 是永久身份和 URL 刷新依据，应长期保存。
+- `URL` 是可轮换的临时公网地址，默认约 7 天有效，不可作为身份或缓存键。
+- `URLExpiresAt` 是 Unix 毫秒时间戳；到期前或到期后使用 `ResolveMedia` 刷新。
+- 图片、视频、音频的访问地址都只叫 `URL`。
+
+```go
+fresh, err := c.ResolveMedia(ctx, &dto.ResolveMediaRequest{
+	OSSKey:    savedOSSKey,
+	MediaType: "image/png",
+})
+if err != nil {
+	return err
+}
+fmt.Println(fresh.URL, fresh.URLExpiresAt)
+```
+
+生成、上传、轮询或回调中的单项 URL 签名失败不会重跑模型、重复上传、重复计费或改变任务终态；结果仍保留 `OSSKey` 和 `MediaType`，`URL` 为空、`URLExpiresAt` 为 `0`，稍后可调用 `ResolveMedia` 恢复。专门的刷新调用签名失败时会直接返回错误。
+
+兼容窗口内，`SpeechResult.AudioOssKey` 已 Deprecated 且与 `SpeechResult.OSSKey` 同值；`VoiceBindingResult.PreviewOssKey`、`PreviewMediaType` 已 Deprecated，且分别与规范 `OSSKey`、`MediaType` 同值。新代码只读取规范字段。
+
+### 上传、同步图片、TTS 与音色预览
+
+```go
+uploaded, err := c.UploadMedia(ctx, aihubsdk.UploadMediaKindImage, "poster.png", imageReader)
+if err != nil {
+	return err
+}
+fmt.Println(uploaded.OSSKey, uploaded.URL, uploaded.URLExpiresAt)
+
+image, err := c.GenerateImage(ctx, &dto.ImageRequest{Model: "image-pro", Prompt: "poster"})
+if err != nil {
+	return err
+}
+fmt.Println(image.Artifacts[0].OSSKey, image.Artifacts[0].URL)
+
+speech, err := c.GenerateSpeech(ctx, &dto.SpeechRequest{Voice: "narrator", Text: "hello"})
+if err != nil {
+	return err
+}
+fmt.Println(speech.OSSKey, speech.URL, speech.URLExpiresAt)
+
+voice, err := c.CreateVoice(ctx, &dto.CreateVoiceRequest{
+	Name:        "warm-narrator",
+	Source:      dto.VoiceSourceDesign,
+	VoicePrompt: "warm and natural",
+	PreviewText: "hello",
+})
+if err != nil {
+	return err
+}
+if len(voice.Succeeded) > 0 {
+	preview := voice.Succeeded[0]
+	fmt.Println(preview.OSSKey, preview.URL, preview.URLExpiresAt)
+}
+```
 
 ### 异步图片
 
@@ -74,6 +143,12 @@ if err != nil {
 	return err
 }
 job, err := c.GetJob(ctx, jobID)
+if err != nil {
+	return err
+}
+if job.State == dto.JobStateSucceeded && len(job.Artifacts) > 0 {
+	fmt.Println(job.Artifacts[0].OSSKey, job.Artifacts[0].URL, job.Artifacts[0].URLExpiresAt)
+}
 ```
 
 ## 异步任务回调
@@ -108,10 +183,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	var result dto.MediaJobResult
 	_ = json.Unmarshal(body, &result)
-	// 处理 result.State / result.Artifacts ...
+	if result.State == dto.JobStateSucceeded && len(result.Artifacts) > 0 {
+		artifact := result.Artifacts[0]
+		fmt.Println(artifact.OSSKey, artifact.URL, artifact.URLExpiresAt)
+	}
 	w.WriteHeader(http.StatusOK)
 }
 ```
+
+轮询和回调使用同一媒体产物字段。每次回调尝试都会重新投影 URL，因此重试时 URL 字符串可能不同；业务身份始终以 `OSSKey` 为准。
 
 ## 错误处理
 
@@ -123,3 +203,7 @@ if errors.As(err, &apiErr) && apiErr.Status == http.StatusUnauthorized {
 	// 鉴权失败
 }
 ```
+
+## 发布顺序
+
+依赖发布顺序为：gokit 显式公网 signer → ai-hub-sdk 统一契约 → AI-HUB server。正式发布、构建和部署不得依赖指向本机目录的绝对 `replace`；本地 workspace/临时 `replace` 只用于联调。
